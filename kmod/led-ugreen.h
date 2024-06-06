@@ -9,7 +9,7 @@
 #define MODULE_NAME             ( "led-ugreen" )
 
 #define UGREEN_LED_SLAVE_ADDR       ( 0x3a )
-#define UGREEN_LED_SLAVE_NAME       ( "ugreen-led" )
+#define UGREEN_LED_SLAVE_NAME       ( "led-ugreen" )
 
 #define UGREEN_MAX_LED_NUMBER           ( 10 )
 #define UGREEN_LED_CHANGE_STATE_RETRY_COUNT   ( 5 )
