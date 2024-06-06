@@ -68,7 +68,34 @@ $ i2cdetect -y 1
 
 ## Build & Usage
 
+**Note**: The kernel module and the command-line tool cannot be simultaneously used. To use the command-line tool, you must unload the `ugreen_led` module.
+
 ### The Kernel Module
+
+Use `cd kmod && make` to build the kernel module, and then use `sudo make load` to load it. Then, you can see the supported LEDs in `/sys/class/leds`. 
+
+Below is an example of setting color, brightness, and blink of `power` LED:
+
+```bash
+echo 255 > /sys/class/leds/power/brightness    # non-zero brightness turns it on
+echo "255 0 0" > /sys/class/leds/power/color   # set to red
+echo "blink 100 100" > /sys/class/leds/power/blink_type  # blink at 10Hz
+```
+
+To blink the `netdev` LED when an NIC is active, you can use the `ledtrig-netdev` module (see the `kmod/netdevmon.sh` script):
+
+```bash
+led="netdev"
+modprobe ledtrig-netdev
+echo netdev > /sys/class/leds/$led/trigger
+echo enp2s0 > /sys/class/leds/$led/device_name
+echo 1 > /sys/class/leds/$led/link
+echo 1 > /sys/class/leds/$led/tx
+echo 1 > /sys/class/leds/$led/rx
+echo 100 > /sys/class/leds/$led/interval
+```
+
+To blink the `disk` LED when a block device is active, you can use the `ledtrig-oneshot` module (see `kmod/diskmon.sh` for an example). 
 
 ### The Command-line Tool
 
@@ -92,7 +119,7 @@ Usage: ugreen_leds_cli  [LED-NAME...] [-on] [-off] [-(blink|breath) T_ON T_OFF]
        -status:     display the status of corresponding LEDs.
 ```
 
-#### Examples
+Below is an example:
 
 ```bash
 # turn on all LEDs
