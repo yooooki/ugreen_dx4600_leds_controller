@@ -280,30 +280,34 @@ static enum led_brightness ugreen_led_get_brightness(struct led_classdev *cdev) 
     return state->status == UGREEN_LED_STATE_OFF ? LED_OFF : state->brightness;
 }
 
-static int ugreen_led_set_blink(struct led_classdev *cdev, unsigned long *delay_on, unsigned long *delay_off) {
-
-    struct ugreen_led_state *state = lcdev_to_ugreen_led_state(cdev);
-    struct ugreen_led_array *priv = state->priv;
-    int led_id = state->led_id;
+static void truncate_blink_delay_time(unsigned long *delay_on, unsigned long *delay_off) {
 
     if (*delay_on < 100) *delay_on = 100;
     else if (*delay_on > 0x7fff) *delay_on = 0x7fff;
 
     if (*delay_off < 100) *delay_off = 100;
     else if (*delay_off > 0x7fff) *delay_off = 0x7fff;
+}
+
+static int ugreen_led_set_blink(struct led_classdev *cdev, unsigned long *delay_on, unsigned long *delay_off) {
+
+    struct ugreen_led_state *state = lcdev_to_ugreen_led_state(cdev);
+    struct ugreen_led_array *priv = state->priv;
+    int led_id = state->led_id;
+
+    truncate_blink_delay_time(delay_on, delay_off);
 
     pr_debug("set blink of %d to %lu %lu\n", led_id, *delay_on, *delay_off);
 
     mutex_lock(&priv->mutex);
 
-    ugreen_led_set_blink_or_breath_unlock(priv, led_id, *delay_on, *delay_on + *delay_off, 
-            state->blink_type == UGREEN_LED_STATE_BLINK ? true : false);
+    ugreen_led_set_blink_or_breath_unlock(priv, led_id, *delay_on, *delay_on + *delay_off, true);
     *delay_on = state->t_on;
     *delay_off = state->t_cycle - state->t_on;
 
     mutex_unlock(&priv->mutex);
 
-    return state->status == state->blink_type ? 0 : -EINVAL;
+    return state->status == UGREEN_LED_STATE_BLINK ? 0 : -EINVAL;
 }
 
 static ssize_t color_store(struct device *dev, 
@@ -354,20 +358,31 @@ static ssize_t blink_type_store(struct device *dev,
     struct ugreen_led_state *state = lcdev_to_ugreen_led_state(cdev);
 
     u8 blink_type;
+    unsigned long delay_on, delay_off;
+    int nrchars;
 
-    if (strcmp(buf, "blink\n") == 0)
+    if (sscanf(buf, "blink %lu %lu%n", &delay_on, &delay_off, &nrchars) == 2) {
         blink_type = UGREEN_LED_STATE_BLINK;
-    else if (strcmp(buf, "breath\n") == 0)
+    } else if(sscanf(buf, "breath %lu %lu%n", &delay_on, &delay_off, &nrchars) == 2) {
         blink_type = UGREEN_LED_STATE_BREATH;
-    else return -EINVAL;
+    } else if(strcmp(buf, "none\n") == 0) {
+        blink_type = UGREEN_LED_STATE_ON;
+        nrchars = size;
+    } else return -EINVAL;
 
+    if (++nrchars < size) {
+        return -EINVAL;
+    }
 
     mutex_lock(&state->priv->mutex);
 
-    state->blink_type = blink_type;
-    if (state->status == UGREEN_LED_STATE_BLINK || state->status == UGREEN_LED_STATE_BREATH) {
-        ugreen_led_set_blink_or_breath_unlock(state->priv, state->led_id, state->t_on, state->t_cycle, 
-                state->blink_type == UGREEN_LED_STATE_BLINK ? true : false);
+    if (blink_type == UGREEN_LED_STATE_ON) {
+        ugreen_led_turn_on_or_off_unlock(state->priv, state->led_id, true);
+    } else {
+        truncate_blink_delay_time(&delay_on, &delay_off);
+        ugreen_led_set_blink_or_breath_unlock(state->priv, state->led_id, 
+                (u16)delay_on, (u16)(delay_on + delay_off),
+                blink_type == UGREEN_LED_STATE_BLINK ? true : false);
     }
 
     mutex_unlock(&state->priv->mutex);
@@ -380,9 +395,23 @@ static ssize_t blink_type_show(struct device *dev, struct device_attribute *attr
     struct led_classdev *cdev = dev_get_drvdata(dev);
     struct ugreen_led_state *state = lcdev_to_ugreen_led_state(cdev);
 
-    if (state->blink_type == UGREEN_LED_STATE_BLINK)
-        return sprintf(buf, "[blink] breath\n");
-    else return sprintf(buf, "blink [breath]\n");
+    ssize_t size = 0;
+
+    if (state->status == UGREEN_LED_STATE_BLINK) {
+        size += sprintf(buf, "none [blink] breath\n");
+    } else if (state->status == UGREEN_LED_STATE_BREATH) {
+        size += sprintf(buf, "none blink [breath]\n");
+    } else {
+        size += sprintf(buf, "[none] blink breath\n");
+    }
+
+    if (state->status == UGREEN_LED_STATE_BLINK || state->status == UGREEN_LED_STATE_BREATH) {
+        size += sprintf(buf + size, "delay_on: %d, delay_off: %d\n", state->t_on, state->t_cycle - state->t_on);
+    }
+
+    size += sprintf(buf + size, "\nUsage: write \"blink <delay_on> <delay_off>\" to change the state.\n");
+
+    return size;
 }
 
 static DEVICE_ATTR_RW(blink_type);
@@ -415,7 +444,6 @@ static int ugreen_led_probe(struct i2c_client *client) {
 
         priv->state[i].priv = priv;
         priv->state[i].led_id = i;
-        priv->state[i].blink_type = UGREEN_LED_STATE_BLINK;
 
         ugreen_led_get_state_robust(client, i, priv->state + i);
 

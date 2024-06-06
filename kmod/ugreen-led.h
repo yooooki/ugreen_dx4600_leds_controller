@@ -23,7 +23,7 @@
 struct ugreen_led_array;
 
 struct ugreen_led_state {
-    u8 status, blink_type;
+    u8 status;
     u8 r, g, b;
     u8 brightness;
     u16 t_on, t_cycle;
