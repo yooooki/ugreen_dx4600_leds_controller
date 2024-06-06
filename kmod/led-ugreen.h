@@ -6,7 +6,7 @@
 #include <linux/leds.h>
 
 
-#define MODULE_NAME             ( "ugreen-led" )
+#define MODULE_NAME             ( "led-ugreen" )
 
 #define UGREEN_LED_SLAVE_ADDR       ( 0x3a )
 #define UGREEN_LED_SLAVE_NAME       ( "ugreen-led" )
