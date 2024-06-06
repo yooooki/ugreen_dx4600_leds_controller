@@ -17,7 +17,7 @@
 #include <linux/proc_fs.h>
 #include <linux/i2c.h>
 #include <linux/i2c-dev.h>
-#include "ugreen-led.h"
+#include "led-ugreen.h"
 
 #ifdef pr_fmt
 #undef pr_fmt
