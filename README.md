@@ -23,18 +23,18 @@ Below is an example:
 
 It can be achieved by the following commands:
 ```bash
-sudo ./ugreen_leds_cli all -off -status
-sudo ./ugreen_leds_cli power  -color 255 0 255 -blink 400 600 -status
+ugreen_leds_cli all -off -status
+ugreen_leds_cli power  -color 255 0 255 -blink 400 600 -status
 sleep 0.1
-sudo ./ugreen_leds_cli netdev -color 255 0 0   -blink 400 600 -status
+ugreen_leds_cli netdev -color 255 0 0   -blink 400 600 -status
 sleep 0.1
-sudo ./ugreen_leds_cli disk1  -color 255 255 0 -blink 400 600 -status
+ugreen_leds_cli disk1  -color 255 255 0 -blink 400 600 -status
 sleep 0.1
-sudo ./ugreen_leds_cli disk2  -color 0 255 0   -blink 400 600 -status
+ugreen_leds_cli disk2  -color 0 255 0   -blink 400 600 -status
 sleep 0.1
-sudo ./ugreen_leds_cli disk3  -color 0 255 255 -blink 400 600 -status
+ugreen_leds_cli disk3  -color 0 255 255 -blink 400 600 -status
 sleep 0.1
-sudo ./ugreen_leds_cli disk4  -color 0 0 255   -blink 400 600 -status
+ugreen_leds_cli disk4  -color 0 0 255   -blink 400 600 -status
 ```
 
 ## Preparation
@@ -66,11 +66,13 @@ $ i2cdetect -y 1
 70: -- -- -- -- -- -- -- --
 ```
 
-## Build
+## Build & Usage
 
-After cloning the current repository, use `make` to build this project. Once the build is complete, we can use `ugreen_leds_cli` to modify the LED states (requires root permissions).
+### The Kernel Module
 
-## Usage
+### The Command-line Tool
+
+Use `cd cli && make` to build the command-line tool, and `ugreen_leds_cli` to modify the LED states (requires root permissions).
 
 ```
 Usage: ugreen_leds_cli  [LED-NAME...] [-on] [-off] [-(blink|breath) T_ON T_OFF]
@@ -90,20 +92,20 @@ Usage: ugreen_leds_cli  [LED-NAME...] [-on] [-off] [-(blink|breath) T_ON T_OFF]
        -status:     display the status of corresponding LEDs.
 ```
 
-### Examples
+#### Examples
 
 ```bash
 # turn on all LEDs
-sudo ./ugreen_leds_cli all -on
+ugreen_leds_cli all -on
 
 # query LEDs' status
-sudo ./ugreen_leds_cli all -status
+ugreen_leds_cli all -status
 
 # turn on the power indicator,
 # and then set its color to blue,
 # and then set its brightness to 128 / 256,
 # and finally display its status
-sudo ./ugreen_leds_cli power -on -color 0 0 255 -brightness 128 -status
+ugreen_leds_cli power -on -color 0 0 255 -brightness 128 -status
 ```
 
 ## Communication Protocols
