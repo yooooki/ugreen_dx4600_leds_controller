@@ -107,7 +107,21 @@ ugreen_leds_cli power -on -color 0 0 255 -brightness 128 -status
 
 ### The Kernel Module
 
-Run `cd kmod && make` to build the kernel module, and then run `sudo make load` to load it. Then, you can see the supported LEDs in `/sys/class/leds`.
+There are three methods to install the module:
+
+- Run `cd kmod && make` to build the kernel module, and then load it with `sudo insmod led-ugreen.ko`.
+
+- Alternatively, you can install it with dkms:
+
+  ```bash
+  cp -r kmod /usr/src/led-ugreen-0.1
+  dkms add -m led-ugreen -v 0.1
+  dkms build -m led-ugreen -v 0.1 && dkms install -m led-ugreen -v 0.1
+  ```
+
+- You can also install the package [here](https://github.com/miskcoo/ugreen_dx4600_leds_controller/releases).
+
+After loading the `led-ugreen` module, you need to run `kmod/ugreen-probe-leds`, and you can see LEDs in `/sys/class/leds`.
 
 Below is an example of setting color, brightness, and blink of the `power` LED:
 
