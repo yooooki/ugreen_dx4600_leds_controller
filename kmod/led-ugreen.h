@@ -20,6 +20,8 @@
 #define UGREEN_LED_STATE_BREATH     ( 3 )
 #define UGREEN_LED_STATE_INVALID    ( 4 )
 
+static const char *ugreen_led_state_name[] = { "off", "on", "blink", "breath", "unknown" };
+
 struct ugreen_led_array;
 
 struct ugreen_led_state {

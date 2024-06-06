@@ -397,16 +397,22 @@ static ssize_t blink_type_show(struct device *dev, struct device_attribute *attr
 
     ssize_t size = 0;
 
-    if (state->status == UGREEN_LED_STATE_BLINK) {
+    mutex_lock(&state->priv->mutex);
+    u8 status = state->status;
+    int delay_on = state->t_on;
+    int delay_off = state->t_cycle - state->t_on;
+    mutex_unlock(&state->priv->mutex);
+
+    if (status == UGREEN_LED_STATE_BLINK) {
         size += sprintf(buf, "none [blink] breath\n");
-    } else if (state->status == UGREEN_LED_STATE_BREATH) {
+    } else if (status == UGREEN_LED_STATE_BREATH) {
         size += sprintf(buf, "none blink [breath]\n");
     } else {
         size += sprintf(buf, "[none] blink breath\n");
     }
 
-    if (state->status == UGREEN_LED_STATE_BLINK || state->status == UGREEN_LED_STATE_BREATH) {
-        size += sprintf(buf + size, "delay_on: %d, delay_off: %d\n", state->t_on, state->t_cycle - state->t_on);
+    if (status == UGREEN_LED_STATE_BLINK || status == UGREEN_LED_STATE_BREATH) {
+        size += sprintf(buf + size, "delay_on: %d, delay_off: %d\n", delay_on, delay_off);
     }
 
     size += sprintf(buf + size, "\nUsage: write \"blink <delay_on> <delay_off>\" to change the state.\n");
@@ -416,8 +422,30 @@ static ssize_t blink_type_show(struct device *dev, struct device_attribute *attr
 
 static DEVICE_ATTR_RW(blink_type);
 
+static ssize_t status_show(struct device *dev, struct device_attribute *attr, char *buf) {
+
+    struct led_classdev *cdev = dev_get_drvdata(dev);
+    struct ugreen_led_state state = *lcdev_to_ugreen_led_state(cdev);
+
+    mutex_lock(&state.priv->mutex);
+    int status = state.status;
+    if (status >= ARRAY_SIZE(ugreen_led_state_name)) {
+        status = UGREEN_LED_STATE_INVALID;
+    }
+    ssize_t size = sprintf(buf, "%s %d %d %d %d %d %d\n", 
+            ugreen_led_state_name[state.status], (int)state.brightness, 
+            (int)state.r, (int)state.g, (int)state.b,
+            (int)state.t_on, (int)(state.t_cycle - state.t_on));
+    mutex_unlock(&state.priv->mutex);
+
+    return size;
+}
+
+static DEVICE_ATTR_RO(status);
+
 static struct attribute *ugreen_led_attrs[] = {
 	&dev_attr_color.attr,
+	&dev_attr_status.attr,
 	&dev_attr_blink_type.attr,
 	NULL,
 };
