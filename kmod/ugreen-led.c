@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: GPL-2.0-only
 /*
- *     UGREEN LED driver
+ *     UGREEN NAS LED driver.
  *
  *	Copyright (C) 2024.
  *	Author: Yuhao Zhou <miskcoo@gmail.com>
@@ -287,9 +287,10 @@ static int ugreen_led_set_blink(struct led_classdev *cdev, unsigned long *delay_
     int led_id = state->led_id;
 
     if (*delay_on < 100) *delay_on = 100;
+    else if (*delay_on > 0x7fff) *delay_on = 0x7fff;
+
     if (*delay_off < 100) *delay_off = 100;
-    if (*delay_on > 0x7fff) *delay_on = 0x7fff;
-    if (*delay_off > 0x7fff) *delay_off = 0x7fff;
+    else if (*delay_off > 0x7fff) *delay_off = 0x7fff;
 
     pr_debug("set blink of %d to %lu %lu\n", led_id, *delay_on, *delay_off);
 
@@ -302,7 +303,7 @@ static int ugreen_led_set_blink(struct led_classdev *cdev, unsigned long *delay_
 
     mutex_unlock(&priv->mutex);
 
-    return state->status == UGREEN_LED_STATE_BLINK;
+    return state->status == state->blink_type ? 0 : -EINVAL;
 }
 
 static ssize_t color_store(struct device *dev, 
@@ -352,11 +353,24 @@ static ssize_t blink_type_store(struct device *dev,
     struct led_classdev *cdev = dev_get_drvdata(dev);
     struct ugreen_led_state *state = lcdev_to_ugreen_led_state(cdev);
 
+    u8 blink_type;
+
     if (strcmp(buf, "blink\n") == 0)
-        state->blink_type = UGREEN_LED_STATE_BLINK;
+        blink_type = UGREEN_LED_STATE_BLINK;
     else if (strcmp(buf, "breath\n") == 0)
-        state->blink_type = UGREEN_LED_STATE_BREATH;
+        blink_type = UGREEN_LED_STATE_BREATH;
     else return -EINVAL;
+
+
+    mutex_lock(&state->priv->mutex);
+
+    state->blink_type = blink_type;
+    if (state->status == UGREEN_LED_STATE_BLINK || state->status == UGREEN_LED_STATE_BREATH) {
+        ugreen_led_set_blink_or_breath_unlock(state->priv, state->led_id, state->t_on, state->t_cycle, 
+                state->blink_type == UGREEN_LED_STATE_BLINK ? true : false);
+    }
+
+    mutex_unlock(&state->priv->mutex);
 
     return size;
 }
@@ -512,5 +526,5 @@ module_exit(ugreen_led_exit);
 
 // Module metadata
 MODULE_AUTHOR("Yuhao Zhou <miskcoo@gmail.com>");
-MODULE_DESCRIPTION("UGREEN LED driver");
+MODULE_DESCRIPTION("UGREEN NAS LED driver");
 MODULE_LICENSE("GPL v2");
