@@ -530,7 +530,7 @@ static int ugreen_led_probe(struct i2c_client *client) {
     return 0;
 }
 
-static void ugreen_led_remove(struct i2c_client *client) {   
+static int ugreen_led_remove(struct i2c_client *client) {   
 
     struct ugreen_led_array *priv = i2c_get_clientdata(client);
 
@@ -546,6 +546,7 @@ static void ugreen_led_remove(struct i2c_client *client) {
     mutex_destroy(&priv->mutex);
 
     pr_info ("i2c removed");
+    return 0;
 }
 
 static const struct i2c_device_id ugreen_led_id[] = {
